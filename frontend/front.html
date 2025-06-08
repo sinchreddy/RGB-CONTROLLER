@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>RGB Controller</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #657ac7;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      text-align: center;
+      width: 400px;
+    }
+
+    h2 {
+      margin-top: 0;
+      font: 3em Times New Roman;
+      font-weight: bold;
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+
+    .slider-container label {
+      width: 50px;
+      text-align: left;
+      font: 1em Times New Roman;
+    }
+
+    .slider-container input[type="range"] {
+      flex: 1;
+      margin: 0 10px;
+    }
+
+    .color-box {
+      width: 30px;
+      height: 20px;
+      border: 1px solid #ccc;
+    }
+
+    .value-input {
+      width: 60px;
+      margin-left: 10px;
+    }
+
+    #preview-box {
+      width: 100%;
+      height: 100px;
+      margin-top: 15px;
+      border: 2px solid #000;
+      border-radius: 8px;
+      font: 2em Times New Roman;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 8px 20px;
+      font-size: 16px;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    select {
+      margin-bottom: 20px;
+      padding: 5px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>RGB Controller</h2>
+
+    <label for="portSelect">Serial Port:</label>
+    <select id="portSelect">
+      <option value="">Loading ports...</option>
+    </select>
+
+    <div class="slider-container">
+      <label>Red:</label>
+      <input type="range" id="r" min="0" max="4095" value="0">
+      <input type="number" id="r-val" class="value-input" min="0" max="4095" value="0">
+      <div class="color-box" id="r-color"></div>
+    </div>
+
+    <div class="slider-container">
+      <label>Green:</label>
+      <input type="range" id="g" min="0" max="4095" value="0">
+      <input type="number" id="g-val" class="value-input" min="0" max="4095" value="0">
+      <div class="color-box" id="g-color"></div>
+    </div>
+
+    <div class="slider-container">
+      <label>Blue:</label>
+      <input type="range" id="b" min="0" max="4095" value="0">
+      <input type="number" id="b-val" class="value-input" min="0" max="4095" value="0">
+      <div class="color-box" id="b-color"></div>
+    </div>
+
+    <h3>Color Preview:</h3>
+    <div id="preview-box"></div>
+
+    <button id="sendButton">Enter</button>
+    <button id="resetButton">Reset</button>
+  </div>
+
+  <script>
+    const sliders = ['r', 'g', 'b'];
+
+    sliders.forEach(id => {
+      const slider = document.getElementById(id);
+      const valueInput = document.getElementById(id + '-val');
+
+      slider.addEventListener('input', () => {
+        valueInput.value = slider.value;
+        updatePreview();
+      });
+
+      valueInput.addEventListener('input', () => {
+        const val = Math.min(Math.max(valueInput.value, 0), 4095);
+        slider.value = val;
+        updatePreview();
+      });
+    });
+
+    document.getElementById('sendButton').addEventListener('click', sendRGB);
+    document.getElementById('resetButton').addEventListener('click', () => {
+      sliders.forEach(id => setSliderValue(id, 0));
+      updatePreview();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendRGB();
+    });
+
+    function updatePreview() {
+      const r = getSliderValue('r');
+      const g = getSliderValue('g');
+      const b = getSliderValue('b');
+
+      const r255 = Math.round((r / 4095) * 255);
+      const g255 = Math.round((g / 4095) * 255);
+      const b255 = Math.round((b / 4095) * 255);
+
+      document.getElementById('r-color').style.backgroundColor = `rgb(${r255}, 0, 0)`;
+      document.getElementById('g-color').style.backgroundColor = `rgb(0, ${g255}, 0)`;
+      document.getElementById('b-color').style.backgroundColor = `rgb(0, 0, ${b255})`;
+      document.getElementById('preview-box').style.backgroundColor = `rgb(${r255}, ${g255}, ${b255})`;
+    }
+
+    function getSliderValue(id) {
+      return parseInt(document.getElementById(id).value);
+    }
+
+    function setSliderValue(id, value) {
+      const val = Math.min(Math.max(value, 0), 4095);
+      document.getElementById(id).value = val;
+      document.getElementById(id + '-val').value = val;
+    }
+
+    function sendRGB() {
+      const r = getSliderValue('r');
+      const g = getSliderValue('g');
+      const b = getSliderValue('b');
+      const port = document.getElementById('portSelect').value;
+
+      console.log(`Sending RGB: R=${r}, G=${g}, B=${b}, Port=${port}`);
+
+      fetch('http://localhost:5000/updated', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ r, g, b, port })
+      })
+      .then(res => res.ok ? alert('RGB sent!') : alert('Error sending'))
+      .catch(() => alert('Backend not reachable'));
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      fetch('http://localhost:5000/ports')
+        .then(res => res.json())
+        .then(data => {
+          const portSelect = document.getElementById('portSelect');
+          portSelect.innerHTML = '';
+          data.ports.forEach(port => {
+            const option = document.createElement('option');
+            option.value = port;
+            option.textContent = port;
+            portSelect.appendChild(option);
+          });
+        })
+        .catch(err => {
+          console.error('Error loading ports:', err);
+          document.getElementById('portSelect').innerHTML =
+            '<option>Error loading ports</option>';
+        });
+    });
+    updatePreview();
+  </script>
+</body>
+</html>
