@@ -12,7 +12,6 @@
 
 ## Project Structure
 <pre>
-```text
 RGB_controller/
 ├── backend/
 │   └── app.py
@@ -20,7 +19,6 @@ RGB_controller/
 │   └── front.html
 ├── requirements.txt
 └── README.md
-```
 </pre>
 
 ## How It Works
